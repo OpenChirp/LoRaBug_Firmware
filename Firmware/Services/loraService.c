@@ -33,7 +33,7 @@
 #include "Config/Board.h"
 
 /* UART logs */
-//#define xdc_runtime_Log_DISABLE_ALL 1  // Add to disable logs from this file
+#define xdc_runtime_Log_DISABLE_ALL 1  // Add to disable logs from this file
 #include <xdc/runtime/Error.h>
 #include <xdc/runtime/Log.h>   // For Log_warning1("Warning number #%d", 4); things
 #include <xdc/runtime/Diags.h> // For Log_print0(Diags_USER1, "hello"); things.
@@ -70,8 +70,8 @@
 static const u1_t APPEUI[8]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 // LoRaWAN DevEUI, unique device ID (LSBF)
-//static const u1_t DEVEUI[8]  = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
-static const u1_t DEVEUI[8]  = { 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB };
+static const u1_t DEVEUI[8]  = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+//static const u1_t DEVEUI[8]  = { 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB };
 
 // LoRaWAN NwkSKey, network session key
 // Use this key for The Things Network
@@ -259,7 +259,7 @@ static void Lora_taskFxn (UArg a0, UArg a1)
 
 
 
-	LMIC_setClockError(30);
+	LMIC_setClockError(1);
 
 	// TTN uses SF9 for its RX2 window.
 	LMIC.dn2Dr = DR_SF7;
@@ -361,7 +361,7 @@ void onEvent (ev_t ev) {
 			DELAY_MS(20);
 			PIN_setOutputValue(ledPinHandle, Board_GLED, false);
 
-			os_setTimedCallback(&sendjob, os_getTime()+ms2osticks(50), send_periodic);
+			os_setTimedCallback(&sendjob, os_getTime()+ms2osticks(1000), send_periodic);
 			break;
 
 		case EV_RXCOMPLETE:
