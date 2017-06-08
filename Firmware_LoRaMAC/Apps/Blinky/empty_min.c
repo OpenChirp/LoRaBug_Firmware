@@ -65,7 +65,7 @@ static PIN_State ledPinState;
  * Application LED pin configuration table:
  *   - All LEDs board LEDs are off.
  */
-PIN_Config ledPinTable[] = {
+PIN_Config ledPinTablex[] = {
     Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     Board_LED1 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     PIN_TERMINATE
@@ -107,7 +107,7 @@ int main(void)
     Task_construct(&task0Struct, (Task_FuncPtr)heartBeatFxn, &taskParams, NULL);
 
     /* Open LED pins */
-    ledPinHandle = PIN_open(&ledPinState, ledPinTable);
+    ledPinHandle = PIN_open(&ledPinState, ledPinTablex);
     if(!ledPinHandle) {
         System_abort("Error initializing board LED pins\n");
     }
