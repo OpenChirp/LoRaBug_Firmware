@@ -39,13 +39,13 @@ Char task0Stack[TASKSTACKSIZE];
 /*!
  * Defines the application data transmission duty cycle. 15s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            15000
+#define APP_TX_DUTYCYCLE                            3000
 
 /*!
  * Defines a random delay for application data transmission duty cycle. 2s,
  * value in [ms].
  */
-#define APP_TX_DUTYCYCLE_RND                        2000
+#define APP_TX_DUTYCYCLE_RND                        1000
 
 /*!
  * Default datarate
@@ -186,15 +186,33 @@ struct ComplianceTest_s
 static void PrepareTxFrame( uint8_t port )
 {
     static uint32_t counter = 0;
+    uint32_t batteryVoltage = 0;
+    uint8_t	batteryLevel = 0;
+
     printf("# PrepareTxFrame\n");
 
     switch( port )
     {
     case 2:
+
+    	batteryVoltage = BoardGetBatteryVoltage();
+    	batteryLevel = BoardGetBatteryLevel();
+
     	memset(AppData, '\0', sizeof(AppData));
-        memcpy(AppData, &counter, sizeof(counter));
+
+    	// Copy Counter
+    	memcpy(AppData, &counter, sizeof(counter));
         AppDataSize = sizeof(counter);
         counter++;
+
+        // Copy Battery Voltage
+        memcpy(AppData + AppDataSize, &batteryVoltage, sizeof(batteryVoltage));
+        AppDataSize += sizeof(batteryVoltage);
+
+        // Copy Battery Level
+        memcpy(AppData + AppDataSize, &batteryLevel, sizeof(batteryLevel));
+        AppDataSize += sizeof(batteryLevel);
+
         break;
 
     case 224:
@@ -757,7 +775,7 @@ void maintask(UArg arg0, UArg arg1)
             }
             case DEVICE_STATE_SLEEP:
             {
-                printf("# DeviceState: DEVICE_STATE_SLEEP\n");
+               // printf("# DeviceState: DEVICE_STATE_SLEEP\n");
                 // Wake up through events
 //                TimerLowPowerHandler( );
                 Task_sleep(TIME_MS * 10);
