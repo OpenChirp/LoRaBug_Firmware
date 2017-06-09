@@ -1,5 +1,6 @@
 
 /* XDCtools Header files */
+#include <Apps/BasicClassAdemo/Commissioning.h>
 #include <xdc/std.h>
 #include <xdc/runtime/System.h>
 
@@ -24,7 +25,6 @@
 #include "io.h"
 
 #include "LoRaMac.h"
-#include "Commissioning.h"
 
 #define TASKSTACKSIZE   2048
 
@@ -37,15 +37,15 @@ Char task0Stack[TASKSTACKSIZE];
 /*------------------------------------------------------------------------*/
 
 /*!
- * Defines the application data transmission duty cycle. 5s, value in [ms].
+ * Defines the application data transmission duty cycle. 15s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            5000
+#define APP_TX_DUTYCYCLE                            15000
 
 /*!
- * Defines a random delay for application data transmission duty cycle. 1s,
+ * Defines a random delay for application data transmission duty cycle. 2s,
  * value in [ms].
  */
-#define APP_TX_DUTYCYCLE_RND                        1000
+#define APP_TX_DUTYCYCLE_RND                        2000
 
 /*!
  * Default datarate
@@ -56,42 +56,14 @@ Char task0Stack[TASKSTACKSIZE];
 /*!
  * LoRaWAN confirmed messages
  */
-#define LORAWAN_CONFIRMED_MSG_ON                    true
+#define LORAWAN_CONFIRMED_MSG_ON                    false
 
 /*!
  * LoRaWAN Adaptive Data Rate
  *
  * \remark Please note that when ADR is enabled the end-device should be static
  */
-//#define LORAWAN_ADR_ON                              1
 #define LORAWAN_ADR_ON                              0
-
-#if defined( USE_BAND_868 )
-
-#include "LoRaMacTest.h"
-
-/*!
- * LoRaWAN ETSI duty cycle control enable/disable
- *
- * \remark Please note that ETSI mandates duty cycled transmissions. Use only for test purposes
- */
-#define LORAWAN_DUTYCYCLE_ON                        true
-
-#define USE_SEMTECH_DEFAULT_CHANNEL_LINEUP          1
-
-#if( USE_SEMTECH_DEFAULT_CHANNEL_LINEUP == 1 )
-
-#define LC4                { 867100000, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
-#define LC5                { 867300000, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
-#define LC6                { 867500000, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
-#define LC7                { 867700000, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
-#define LC8                { 867900000, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
-#define LC9                { 868800000, { ( ( DR_7 << 4 ) | DR_7 ) }, 2 }
-#define LC10               { 868300000, { ( ( DR_6 << 4 ) | DR_6 ) }, 1 }
-
-#endif
-
-#endif
 
 /*!
  * LoRaWAN application port
@@ -99,17 +71,9 @@ Char task0Stack[TASKSTACKSIZE];
 #define LORAWAN_APP_PORT                            2
 
 /*!
- * User application data buffer size
+ * User application data buffer size BAND_915
  */
-#if defined( USE_BAND_433 ) || defined( USE_BAND_470 ) || defined( USE_BAND_780 ) || defined( USE_BAND_868 )
-
-#define LORAWAN_APP_DATA_SIZE                       16
-
-#elif defined( USE_BAND_915 ) || defined( USE_BAND_915_HYBRID )
-
 #define LORAWAN_APP_DATA_SIZE                       11
-
-#endif
 
 static uint8_t DevEui[] = LORAWAN_DEVICE_EUI;
 static uint8_t AppEui[] = LORAWAN_APPLICATION_EUI;
@@ -227,70 +191,12 @@ static void PrepareTxFrame( uint8_t port )
     switch( port )
     {
     case 2:
-        {
-#if defined( USE_BAND_433 ) || defined( USE_BAND_470 ) || defined( USE_BAND_780 ) || defined( USE_BAND_868 )
-            uint16_t pressure = 0;
-            int16_t altitudeBar = 0;
-            int16_t temperature = 0;
-            int32_t latitude, longitude = 0;
-            int16_t altitudeGps = 0xFFFF;
-            uint8_t batteryLevel = 0;
-
-            pressure = ( uint16_t )( MPL3115ReadPressure( ) / 10 );             // in hPa / 10
-            temperature = ( int16_t )( MPL3115ReadTemperature( ) * 100 );       // in �C * 100
-            altitudeBar = ( int16_t )( MPL3115ReadAltitude( ) * 10 );           // in m * 10
-            batteryLevel = BoardGetBatteryLevel( );                             // 1 (very low) to 254 (fully charged)
-//            GpsGetLatestGpsPositionBinary( &latitude, &longitude );
-//            altitudeGps = GpsGetLatestGpsAltitude( );                           // in m
-
-            AppData[0] = AppLedStateOn;
-            AppData[1] = ( pressure >> 8 ) & 0xFF;
-            AppData[2] = pressure & 0xFF;
-            AppData[3] = ( temperature >> 8 ) & 0xFF;
-            AppData[4] = temperature & 0xFF;
-            AppData[5] = ( altitudeBar >> 8 ) & 0xFF;
-            AppData[6] = altitudeBar & 0xFF;
-            AppData[7] = batteryLevel;
-            AppData[8] = ( latitude >> 16 ) & 0xFF;
-            AppData[9] = ( latitude >> 8 ) & 0xFF;
-            AppData[10] = latitude & 0xFF;
-            AppData[11] = ( longitude >> 16 ) & 0xFF;
-            AppData[12] = ( longitude >> 8 ) & 0xFF;
-            AppData[13] = longitude & 0xFF;
-            AppData[14] = ( altitudeGps >> 8 ) & 0xFF;
-            AppData[15] = altitudeGps & 0xFF;
-#elif defined( USE_BAND_915 ) || defined( USE_BAND_915_HYBRID )
-//            int16_t temperature = 0;
-//            int32_t latitude = 0, longitude = 0;
-//            uint16_t altitudeGps = 0xFFFF;
-//            uint8_t batteryLevel = 0;
-
-//            temperature = ( int16_t )( MPL3115ReadTemperature( ) * 100 );       // in �C * 100
-
-//            batteryLevel = BoardGetBatteryLevel( );                             // 1 (very low) to 254 (fully charged)
-//            GpsGetLatestGpsPositionBinary( &latitude, &longitude );
-//            altitudeGps = GpsGetLatestGpsAltitude( );                           // in m
-
-//            AppData[0] = AppLedStateOn;
-//            AppData[1] = temperature;                                           // Signed degrees celsius in half degree units. So,  +/-63 C
-//            AppData[2] = batteryLevel;                                          // Per LoRaWAN spec; 0=Charging; 1...254 = level, 255 = N/A
-//            AppData[3] = ( latitude >> 16 ) & 0xFF;
-//            AppData[4] = ( latitude >> 8 ) & 0xFF;
-//            AppData[5] = latitude & 0xFF;
-//            AppData[6] = ( longitude >> 16 ) & 0xFF;
-//            AppData[7] = ( longitude >> 8 ) & 0xFF;
-//            AppData[8] = longitude & 0xFF;
-//            AppData[9] = ( altitudeGps >> 8 ) & 0xFF;
-//            AppData[10] = altitudeGps & 0xFF;
-
-            memset(AppData, '\0', sizeof(AppData));
-            memcpy(AppData, &counter, sizeof(counter));
-            AppDataSize = sizeof(counter);
-            counter++;
-
-#endif
-        }
+    	memset(AppData, '\0', sizeof(AppData));
+        memcpy(AppData, &counter, sizeof(counter));
+        AppDataSize = sizeof(counter);
+        counter++;
         break;
+
     case 224:
         if( ComplianceTest.LinkCheck == true )
         {
@@ -565,11 +471,6 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
                     mibReq.Type = MIB_ADR;
                     mibReq.Param.AdrEnable = true;
                     LoRaMacMibSetRequestConfirm( &mibReq );
-
-#if defined( USE_BAND_868 )
-                    LoRaMacTestSetDutyCycleOn( false );
-#endif
-//                    GpsStop( );
                 }
             }
             else
@@ -588,10 +489,6 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
                     mibReq.Type = MIB_ADR;
                     mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
                     LoRaMacMibSetRequestConfirm( &mibReq );
-#if defined( USE_BAND_868 )
-                    LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
-#endif
-//                    GpsStart( );
                     break;
                 case 1: // (iii, iv)
                     AppDataSize = 2;
@@ -635,10 +532,6 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
                         mibReq.Type = MIB_ADR;
                         mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
                         LoRaMacMibSetRequestConfirm( &mibReq );
-#if defined( USE_BAND_868 )
-                        LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
-#endif
-//                        GpsStart( );
 
                         mlmeReq.Type = MLME_JOIN;
 
@@ -771,28 +664,6 @@ void maintask(UArg arg0, UArg arg1)
                 mibReq.Param.EnablePublicNetwork = LORAWAN_PUBLIC_NETWORK;
                 LoRaMacMibSetRequestConfirm( &mibReq );
 
-#if defined( USE_BAND_868 )
-                LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
-
-#if( USE_SEMTECH_DEFAULT_CHANNEL_LINEUP == 1 )
-                LoRaMacChannelAdd( 3, ( ChannelParams_t )LC4 );
-                LoRaMacChannelAdd( 4, ( ChannelParams_t )LC5 );
-                LoRaMacChannelAdd( 5, ( ChannelParams_t )LC6 );
-                LoRaMacChannelAdd( 6, ( ChannelParams_t )LC7 );
-                LoRaMacChannelAdd( 7, ( ChannelParams_t )LC8 );
-                LoRaMacChannelAdd( 8, ( ChannelParams_t )LC9 );
-                LoRaMacChannelAdd( 9, ( ChannelParams_t )LC10 );
-
-                mibReq.Type = MIB_RX2_DEFAULT_CHANNEL;
-                mibReq.Param.Rx2DefaultChannel = ( Rx2ChannelParams_t ){ 869525000, DR_3 };
-                LoRaMacMibSetRequestConfirm( &mibReq );
-
-                mibReq.Type = MIB_RX2_CHANNEL;
-                mibReq.Param.Rx2Channel = ( Rx2ChannelParams_t ){ 869525000, DR_3 };
-                LoRaMacMibSetRequestConfirm( &mibReq );
-#endif
-
-#endif
                 DeviceState = DEVICE_STATE_JOIN;
                 break;
             }
@@ -899,12 +770,6 @@ void maintask(UArg arg0, UArg arg1)
                 break;
             }
         }
-//        if( GpsGetPpsDetectedState( ) == true )
-//        {
-//            // Switch LED 4 ON
-//            GpioWrite( &Led4, 0 );
-//            TimerStart( &Led4Timer );
-//        }
     }
 
 }
