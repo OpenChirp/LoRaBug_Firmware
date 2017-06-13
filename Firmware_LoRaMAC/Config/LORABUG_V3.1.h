@@ -135,15 +135,7 @@ extern const PIN_Config BoardGpioInitTable[];
 #define Board_LCD_CS_ON             1
 #define Board_LCD_CS_OFF            0
 
-/* PWM outputs */
-#define Board_PWMPIN0                       Board_RLED
-#define Board_PWMPIN1                       Board_GLED
-#define Board_PWMPIN2                       PIN_UNASSIGNED
-#define Board_PWMPIN3                       PIN_UNASSIGNED
-#define Board_PWMPIN4                       PIN_UNASSIGNED
-#define Board_PWMPIN5                       PIN_UNASSIGNED
-#define Board_PWMPIN6                       PIN_UNASSIGNED
-#define Board_PWMPIN7                       PIN_UNASSIGNED
+
 
 
 /* RGBW Board LED */
@@ -161,6 +153,16 @@ extern const PIN_Config BoardGpioInitTable[];
 #define Board_BTN_PREV				IOID_30
 #define Board_BTN_SELECT			IOID_28
 #define Board_BTN_NEXT				IOID_29
+
+/* PWM outputs */
+#define Board_PWMPIN0                       Board_RLED
+#define Board_PWMPIN1                       Board_LED_R
+#define Board_PWMPIN2                       Board_LED_G
+#define Board_PWMPIN3                       Board_LED_B
+#define Board_PWMPIN4                       Board_MOSFET_R
+#define Board_PWMPIN5                       Board_MOSFET_G
+#define Board_PWMPIN6                       Board_MOSFET_B
+#define Board_PWMPIN7                       Board_MOSFET_W
 
 /** ============================================================================
  *  Instance identifiers
