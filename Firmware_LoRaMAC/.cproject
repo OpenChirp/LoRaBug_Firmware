@@ -114,7 +114,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="LoRaMac-node/src/peripherals/sx9500.c|LoRaMac-node/src/boards/NAMote72|LoRaMac-node/src/peripherals/mag3110.c|LoRaMac-node/src/peripherals/mma8451.c|LoRaMac-node/src/apps|LoRaMac-node/src/peripherals/sx1509.c|src|Config/src|LoRaMac-node/src/system/delay.c|LoRaMac-node/src/peripherals/gpio-ioe.c|LoRaMac-node/src/boards/mcu|LoRaMac-node/src/system/fifo.c|LoRaMac-node/src/boards/LoRaMote|LoRaMac-node/src/system/gps.c|LoRaMac-node/src/peripherals/selector.c|LoRaMac-node/src/peripherals/mpl3115.c|LoRaMac-node/src/system/timer.c|cc26x0f128.cmd|LoRaMac-node/src/peripherals/pam7q.c|Apps/Blinky|LoRaMac-node/src/system/eeprom.c|LoRaMac-node/src/system/uart.c|LoRaMac-node/src/boards/MoteII|LoRaMac-node/src/boards/SK-iM880A|LoRaMac-node/src/radio/sx1272|LoRaMac-node/src/system/i2c.c|LoRaMac-node/src/system/gpio.c|LoRaMac-node/src/system/adc.c|LoRaMac-node/src/boards/SensorNode" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="LoRaMac-node/src/system/gpio.c|LoRaMac-node/src/system/delay.c|LoRaMac-node/src/system/gps.c|LoRaMac-node/src/system/eeprom.c|LoRaMac-node/src/system/i2c.c|LoRaMac-node/src/system/timer.c|LoRaMac-node/src/system/uart.c|LoRaMac-node/src/system/adc.c|LoRaMac-node/src/apps|LoRaMac-node/src/boards/SK-iM880A|LoRaMac-node/src/boards/mcu|LoRaMac-node/src/boards/SensorNode|LoRaMac-node/src/boards/NAMote72|LoRaMac-node/src/boards/MoteII|LoRaMac-node/src/boards/LoRaMote|LoRaMac-node/src/peripherals|LoRaMac-node/src/radio/sx1272|Apps/BasicClassAdemo|Config/src|cc26x0f128.cmd|Apps/Blinky" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -223,7 +223,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Config/LORABUG_linker.cmd|Config/src|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Config/src|Config/LORABUG_linker.cmd" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
