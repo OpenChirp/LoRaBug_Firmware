@@ -1,7 +1,8 @@
 
 /* XDCtools Header files */
-#include <Apps/BasicClassAdemo/Commissioning.h>
+
 #include <xdc/std.h>
+#include <string.h> // strlen in uartputs and LoRaWan code
 #include <xdc/runtime/System.h>
 
 /* BIOS Header files */
@@ -20,11 +21,9 @@
 /* Board Header files */
 #include "Board.h"
 
-#include <string.h> // strlen in uartputs and LoRaWan code
-#include <math.h>
-#include "board.h"
-//#include "io.h"
 
+#include "Commissioning.h"
+#include "board.h"
 #include "LoRaMac.h"
 
 #define TASKSTACKSIZE   2048
@@ -802,14 +801,43 @@ void PWM_fadeTo(PWMDevice *pwm, int16_t duty, uint32_t time){
 
 void PWM_test(){
 
-	PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
-	PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
+	while(true){
 
-	PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
-	PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
 
-	PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
-	PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+
+		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+
+
+		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+
+		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+
+		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+
+		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+
+		DELAY_MS(1000);
+
+	}
 
 }
 
