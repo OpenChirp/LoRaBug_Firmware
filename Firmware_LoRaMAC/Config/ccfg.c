@@ -50,7 +50,7 @@
 // Bootloader settings
 //#####################################
 
-#include "Board.h"
+#include <Board_LoRaBUG.h>
 
 #ifndef SET_CCFG_BL_CONFIG_BOOTLOADER_ENABLE
 //#define SET_CCFG_BL_CONFIG_BOOTLOADER_ENABLE            0x00       // Disable ROM boot loader

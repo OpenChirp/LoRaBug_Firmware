@@ -1,6 +1,7 @@
 
 /* XDCtools Header files */
 
+#include <Board_LoRaBUG.h>
 #include <xdc/std.h>
 #include <string.h> // strlen in uartputs and LoRaWan code
 #include <xdc/runtime/System.h>
@@ -19,9 +20,6 @@
 // #include <ti/drivers/Watchdog.h>
 
 /* Board Header files */
-#include "Board.h"
-
-
 #include "Commissioning.h"
 #include "board.h"
 #include "LoRaMac.h"

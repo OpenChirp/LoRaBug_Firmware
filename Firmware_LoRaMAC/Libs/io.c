@@ -4,14 +4,11 @@
  * @date Apr 21, 2017
  */
 
+#include <Board_LoRaBUG.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
-#include "Board.h"
-//#include "board.h"
-
-/* XDCtools Header files */
 #include <xdc/std.h>
 #include <xdc/runtime/System.h>
 

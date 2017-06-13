@@ -40,6 +40,7 @@
 /*
  *  ====================== Includes ============================================
  */
+#include <Board_LoRaBUG.h>
 #include <xdc/std.h>
 #include <xdc/runtime/System.h>
 
@@ -57,7 +58,6 @@
 #include <driverlib/ioc.h>
 #include <driverlib/udma.h>
 
-#include <Board.h>
 
 /*
  *  ========================= IO driver initialization =========================

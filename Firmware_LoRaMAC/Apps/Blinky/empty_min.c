@@ -50,7 +50,7 @@
 // #include <ti/drivers/Watchdog.h>
 
 /* Board Header files */
-#include "Board.h"
+#include "Board_LoRaBUG.h"
 
 #define TASKSTACKSIZE   512
 
