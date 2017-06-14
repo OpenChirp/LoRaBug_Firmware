@@ -23,6 +23,7 @@
 #include "Commissioning.h"
 #include "board.h"
 #include "LoRaMac.h"
+#include "io.h"
 
 #define TASKSTACKSIZE   2048
 
@@ -37,15 +38,15 @@ Char task0Stack[TASKSTACKSIZE];
 /*------------------------------------------------------------------------*/
 
 /*!
- * Defines the application data transmission duty cycle. 15s, value in [ms].
+ * Defines the application data transmission duty cycle. 60s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            15000
+#define APP_TX_DUTYCYCLE                            60000
 
 /*!
- * Defines a random delay for application data transmission duty cycle. 2s,
+ * Defines a random delay for application data transmission duty cycle. 7s,
  * value in [ms].
  */
-#define APP_TX_DUTYCYCLE_RND                        2000
+#define APP_TX_DUTYCYCLE_RND                        7000
 
 /*!
  * Default datarate
@@ -197,8 +198,8 @@ static enum eColors
 
 typedef struct PWMDevice_s {
 	PWM_Handle handler;
-	volatile uint16_t duty;		// duty cycle of the pwm device (0-100%)
-	bool inverted;		// used to negate the duty cycle
+	volatile uint16_t duty;		// duty cycle of the pwm device (0-255)
+	bool inverted;				// used to negate the duty cycle
 } PWMDevice;
 
 static struct ColorHandlers_s
@@ -214,13 +215,45 @@ static struct ColorHandlers_s
 }ColorHandlers;
 
 
+void PWM_fadeTo(PWMDevice *pwm, int32_t duty, uint32_t time){
+
+	int32_t range;
+	int32_t increment;
+	uint16_t divisions = (time < 50) ? 1 : time / 50;	// mimimum delay is 50 milliseconds
+	int32_t duty_now = pwm->duty;
+
+	if(pwm->inverted){
+		range = duty - (255 - pwm->duty);
+		increment = -(range/divisions);
+	}else{
+		range = duty - pwm->duty;
+		increment = (range/divisions);
+	}
+
+	if (range == 0)
+		return;
+
+	for (uint16_t i = 0; i < time; i += 50){
+		duty_now += increment;
+		if(0 <= duty_now <= 255)
+			PWM_setDuty(pwm->handler, (float)duty_now/(float)255 * PWM_DUTY_FRACTION_MAX);
+		DELAY_MS(50);
+	}
+
+	// adjust for any fraction errors
+	PWM_setDuty(pwm->handler, (float)duty_now/(float)255 * PWM_DUTY_FRACTION_MAX);
+	pwm->duty = duty_now; // set the final duty
+
+}
+
+
 /*!
  * \brief   Prepares the payload of the frame
  */
 static void PrepareTxFrame( uint8_t port )
 {
     static uint32_t counter = 0;
-    printf("# PrepareTxFrame\n");
+    //printf("# PrepareTxFrame\n");
 
     switch( port )
     {
@@ -271,7 +304,8 @@ static bool SendFrame( void )
     McpsReq_t mcpsReq;
     LoRaMacTxInfo_t txInfo;
 
-    printf("# SendFrame\n");
+    uartputs("# SendFrame\n");
+
 
     if( LoRaMacQueryTxPossible( AppDataSize, &txInfo ) != LORAMAC_STATUS_OK )
     {
@@ -314,7 +348,7 @@ static bool SendFrame( void )
  */
 static void OnTxNextPacketTimerEvent( void )
 {
-    printf("# OnTxNextPacketTimerEvent\n");
+    //printf("# OnTxNextPacketTimerEvent\n");
     MibRequestConfirm_t mibReq;
     LoRaMacStatus_t status;
 
@@ -377,12 +411,14 @@ static void OnLed4TimerEvent( void )
  */
 static void McpsConfirm( McpsConfirm_t *mcpsConfirm )
 {
-    printf("# McpsConfirm\n");
+    //printf("# McpsConfirm\n");
     uartputs("# McpsConfirm\n");
     if( mcpsConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
     {
         switch( mcpsConfirm->McpsRequest )
         {
+
+        	// TODO verify the packet (do I need to change color ?)
             case MCPS_UNCONFIRMED:
             {
                 // Check Datarate
@@ -423,7 +459,7 @@ static void McpsConfirm( McpsConfirm_t *mcpsConfirm )
  */
 static void McpsIndication( McpsIndication_t *mcpsIndication )
 {
-    printf("# McpsIndication\n");
+    //printf("# McpsIndication\n");
     if( mcpsIndication->Status != LORAMAC_EVENT_INFO_STATUS_OK )
     {
         return;
@@ -434,11 +470,66 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
         case MCPS_UNCONFIRMED:
         {
             uartputs("# Got McpsIndication: MCPS_UNCONFIRMED\n");
+            //TODO write code to change color (below as well)
+
+            uartprintf("Received %d bytes on Port %d\r\n", mcpsIndication->BufferSize, mcpsIndication->Port);
+
+            // Process Received Data
+            if (mcpsIndication->BufferSize > 0){
+
+            	uartprintf("Option: %d \r\n", mcpsIndication->Buffer[0]);
+
+            	switch (mcpsIndication->Buffer[0])
+            	{
+            	case 0:	// set Fixed Color
+
+            		uartprintf("Red:%u Green:%u Blue: %u \r\n", mcpsIndication->Buffer[1], mcpsIndication->Buffer[2], mcpsIndication->Buffer[3]);
+
+            		// Colors Off
+            		PWM_fadeTo(&ColorHandlers.LedRed, 0, 200);
+            		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 200);
+            		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 200);
+
+            		PWM_fadeTo(&ColorHandlers.LedRed, mcpsIndication->Buffer[1], 200);
+            		PWM_fadeTo(&ColorHandlers.LedGreen, mcpsIndication->Buffer[2], 200);
+            		PWM_fadeTo(&ColorHandlers.LedBlue, mcpsIndication->Buffer[3], 200);
+
+            		break;
+
+            	case 1:	// Random Color Mode
+
+            		uint8_t r = (uint8_t)randr(0, 255);
+            		uint8_t g = (uint8_t)randr(0, 255);
+            		uint8_t b = (uint8_t)randr(0, 255);
+
+            		uartprintf("Set Random Color:  Red:%u Green:%u Blue: %u \r\n", r, g, b);
+
+            		// Colors Off
+            		PWM_fadeTo(&ColorHandlers.LedRed, 0, 200);
+            		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 200);
+            		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 200);
+
+            		PWM_fadeTo(&ColorHandlers.LedRed, r, 200);
+            		PWM_fadeTo(&ColorHandlers.LedGreen, g, 200);
+            		PWM_fadeTo(&ColorHandlers.LedBlue, b, 200);
+
+            		break;
+            	case 2: // Rainbow Transition Mode
+            		//TODO
+            		break;
+            	default:
+            		break;
+            	}
+            }
+
+            //mcpsIndication->BufferSize
+
             break;
         }
         case MCPS_CONFIRMED:
         {
             uartputs("# Got McpsIndication: MCPS_CONFIRMED\n");
+            //TODO write code to change color
             break;
         }
         case MCPS_PROPRIETARY:
@@ -614,16 +705,18 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
  */
 static void MlmeConfirm( MlmeConfirm_t *mlmeConfirm )
 {
-    printf("# MlmeConfirm\n");
+    //printf("# MlmeConfirm\n");
     switch( mlmeConfirm->MlmeRequest )
     {
         case MLME_JOIN:
         {
-            printf("# MlmeConfirm: Join\n");
+            //printf("# MlmeConfirm: Join\n");
             if( mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
             {
                 // Status is OK, node has joined the network
                 DeviceState = DEVICE_STATE_SEND;
+                PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+                uartputs("# MlmeConfirm: Joined\n");
             }
             else
             {
@@ -634,7 +727,7 @@ static void MlmeConfirm( MlmeConfirm_t *mlmeConfirm )
         }
         case MLME_LINK_CHECK:
         {
-            printf("# MlmeConfirm: Link Check\n");
+        	uartputs("# MlmeConfirm: Link Check\n");
             if( mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
             {
                 // Check DemodMargin
@@ -709,7 +802,7 @@ void LEDsTest(){
 /*
  * Function that initiates the PWM devices, the LEDs are powered at LOW
  * this means their PWM value should be the inverted of the active.
- * i.e. 100% duty cycle means 0%, the Mosfets are not inverted.
+ * i.e. 255 duty cycle means 0, the Mosfets are not inverted.
  */
 void PWM_Init_Devices(){
 
@@ -749,13 +842,13 @@ void PWM_Init_Devices(){
 
 
 
-    // RGB LEDs LOW is at duty cycle 100 %
+    // RGB LEDs LOW is at duty cycle 100 % (255)
     ColorHandlers.LedRed.inverted = true;
-    ColorHandlers.LedRed.duty = 100;
+    ColorHandlers.LedRed.duty = 255;
 	ColorHandlers.LedGreen.inverted = true;
-	ColorHandlers.LedGreen.duty = 100;
+	ColorHandlers.LedGreen.duty = 255;
 	ColorHandlers.LedBlue.inverted = true;
-	ColorHandlers.LedBlue.duty = 100;
+	ColorHandlers.LedBlue.duty = 255;
 
     // Turn RGB LEDs off buy increasing duty cycle to 100%
     PWM_setDuty(ColorHandlers.LedRed.handler, 1 * PWM_DUTY_FRACTION_MAX);
@@ -766,76 +859,42 @@ void PWM_Init_Devices(){
 
 }
 
-void PWM_fadeTo(PWMDevice *pwm, int16_t duty, uint32_t time){
 
-	int32_t range;
-	int32_t increment;
-	uint16_t divisions = time / 50;	// mimimum delay is 50 milliseconds
-	int32_t duty_now = pwm->duty;
-
-	if(pwm->inverted){
-		range = duty - (100 - pwm->duty);
-		increment = -(range/divisions);
-	}else{
-		range = duty - pwm->duty;
-		increment = (range/divisions);
-	}
-
-	if (range == 0)
-		return;
-
-	for (uint16_t i = 0; i < time; i += 50){
-		duty_now += increment;
-		if(0 <= duty_now <= 100)
-			PWM_setDuty(pwm->handler, (float)duty_now/(float)100 * PWM_DUTY_FRACTION_MAX);
-		DELAY_MS(50);
-	}
-
-	// adjust for any fraction errors
-	PWM_setDuty(pwm->handler, (float)duty_now/(float)100 * PWM_DUTY_FRACTION_MAX);
-	pwm->duty = duty_now; // set the final duty
-
-}
 
 void PWM_test(){
 
-	while(true){
 
-		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
 
-		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
 
-		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
 
 
-		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
 
-		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
 
-		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
 
-		PWM_fadeTo(&ColorHandlers.LedRed, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 100, 500);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 500);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 500);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 500);
-
-		DELAY_MS(1000);
-
-	}
+		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
+		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
+		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
+		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
 
 }
 
@@ -857,6 +916,7 @@ void maintask()
     BoardInitPeriph( );
 
     printf("# Board initialized\n");
+    uartputs("# Board initialized\n");
 
     /* Demo PWM */
     PWM_test();
@@ -896,12 +956,17 @@ void maintask()
                 mibReq.Param.EnablePublicNetwork = LORAWAN_PUBLIC_NETWORK;
                 LoRaMacMibSetRequestConfirm( &mibReq );
 
+                // Change device to Class C
+                mibReq.Type = MIB_DEVICE_CLASS;
+                mibReq.Param.Class = CLASS_C;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
                 DeviceState = DEVICE_STATE_JOIN;
                 break;
             }
             case DEVICE_STATE_JOIN:
             {
-                printf("# DeviceState: DEVICE_STATE_JOIN\n");
+                //printf("# DeviceState: DEVICE_STATE_JOIN\n");
 #if( OVER_THE_AIR_ACTIVATION != 0 )
                 MlmeReq_t mlmeReq;
 
@@ -957,7 +1022,7 @@ void maintask()
             }
             case DEVICE_STATE_SEND:
             {
-                printf("# DeviceState: DEVICE_STATE_SEND\n");
+                //printf("# DeviceState: DEVICE_STATE_SEND\n");
                 if( NextTx == true )
                 {
                     PrepareTxFrame( AppPort );
@@ -979,7 +1044,7 @@ void maintask()
             }
             case DEVICE_STATE_CYCLE:
             {
-                printf("# DeviceState: DEVICE_STATE_CYCLE\n");
+                //printf("# DeviceState: DEVICE_STATE_CYCLE\n");
                 DeviceState = DEVICE_STATE_SLEEP;
 
                 // Schedule next packet transmission
@@ -989,7 +1054,7 @@ void maintask()
             }
             case DEVICE_STATE_SLEEP:
             {
-                printf("# DeviceState: DEVICE_STATE_SLEEP\n");
+                //printf("# DeviceState: DEVICE_STATE_SLEEP\n");
                 // Wake up through events
 //                TimerLowPowerHandler( );
                 Task_sleep(TIME_MS * 10);
@@ -1007,7 +1072,7 @@ void maintask()
 }
 
 
-
+// TODO migrate PWM functions to a different file
 
 /*
  *  ======== main ========
@@ -1032,6 +1097,9 @@ int main(void)
     taskParams.stack = &task0Stack;
     Task_construct(&task0Struct, (Task_FuncPtr) maintask, &taskParams,
                    NULL);
+
+    // Initialize UART
+    setupuart();
 
     /* Start BIOS */
     BIOS_start();
