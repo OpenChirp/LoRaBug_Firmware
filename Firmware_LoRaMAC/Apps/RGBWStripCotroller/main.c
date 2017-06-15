@@ -1,7 +1,10 @@
+/**
+ * @author Artur Balanuta <Artur [dot] Balanuta [at] Gmail [dot] com>
+ */
 
 /* XDCtools Header files */
 
-#include <Board_LoRaBUG.h>
+
 #include <xdc/std.h>
 #include <string.h> // strlen in uartputs and LoRaWan code
 #include <xdc/runtime/System.h>
@@ -16,7 +19,7 @@
 #include <ti/drivers/PIN.h>
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/UART.h>
-#include <ti/drivers/PWM.h>
+
 // #include <ti/drivers/Watchdog.h>
 
 /* Board Header files */
@@ -24,6 +27,7 @@
 #include "board.h"
 #include "LoRaMac.h"
 #include "io.h"
+#include "rgbw.h"
 
 #define TASKSTACKSIZE   2048
 
@@ -31,6 +35,8 @@
 
 Task_Struct task0Struct;
 Char task0Stack[TASKSTACKSIZE];
+
+
 
 
 /*------------------------------------------------------------------------*/
@@ -181,70 +187,6 @@ struct ComplianceTest_s
     uint8_t NbGateways;
 }ComplianceTest;
 
-
-static enum eColors
-{
-	COLOR_BLACK 	= 0b000,
-	COLOR_RED 		= 0b100,
-	COLOR_GREEN 	= 0b010,
-	COLOR_BLUE 		= 0b001,
-	COLOR_YELLOW	= 0b110,
-	COLOR_CYAN		= 0b011,
-	COLOR_PURPLE	= 0b101,
-	COLOR_WHITE		= 0b111
-
-}Colors_t;
-
-
-typedef struct PWMDevice_s {
-	PWM_Handle handler;
-	volatile uint16_t duty;		// duty cycle of the pwm device (0-255)
-	bool inverted;				// used to negate the duty cycle
-} PWMDevice;
-
-static struct ColorHandlers_s
-{
-	PWMDevice LedRed;
-	PWMDevice LedGreen;
-	PWMDevice LedBlue;
-	PWMDevice MosfetRed;
-	PWMDevice MosfetGreen;
-	PWMDevice MosfetBlue;
-	PWMDevice MosfetWhite;
-
-}ColorHandlers;
-
-
-void PWM_fadeTo(PWMDevice *pwm, int32_t duty, uint32_t time){
-
-	int32_t range;
-	int32_t increment;
-	uint16_t divisions = (time < 50) ? 1 : time / 50;	// mimimum delay is 50 milliseconds
-	int32_t duty_now = pwm->duty;
-
-	if(pwm->inverted){
-		range = duty - (255 - pwm->duty);
-		increment = -(range/divisions);
-	}else{
-		range = duty - pwm->duty;
-		increment = (range/divisions);
-	}
-
-	if (range == 0)
-		return;
-
-	for (uint16_t i = 0; i < time; i += 50){
-		duty_now += increment;
-		if(0 <= duty_now <= 255)
-			PWM_setDuty(pwm->handler, (float)duty_now/(float)255 * PWM_DUTY_FRACTION_MAX);
-		DELAY_MS(50);
-	}
-
-	// adjust for any fraction errors
-	PWM_setDuty(pwm->handler, (float)duty_now/(float)255 * PWM_DUTY_FRACTION_MAX);
-	pwm->duty = duty_now; // set the final duty
-
-}
 
 
 /*!
@@ -477,52 +419,13 @@ static void McpsIndication( McpsIndication_t *mcpsIndication )
             // Process Received Data
             if (mcpsIndication->BufferSize > 0){
 
-            	uartprintf("Option: %d \r\n", mcpsIndication->Buffer[0]);
+            	struct Command_s cmd;
+            	memcpy(cmd.buff, mcpsIndication->Buffer, COMMAND_SIZE);
 
-            	switch (mcpsIndication->Buffer[0])
-            	{
-            	case 0:	// set Fixed Color
-
-            		uartprintf("Red:%u Green:%u Blue: %u \r\n", mcpsIndication->Buffer[1], mcpsIndication->Buffer[2], mcpsIndication->Buffer[3]);
-
-            		// Colors Off
-            		PWM_fadeTo(&ColorHandlers.LedRed, 0, 200);
-            		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 200);
-            		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 200);
-
-            		PWM_fadeTo(&ColorHandlers.LedRed, mcpsIndication->Buffer[1], 200);
-            		PWM_fadeTo(&ColorHandlers.LedGreen, mcpsIndication->Buffer[2], 200);
-            		PWM_fadeTo(&ColorHandlers.LedBlue, mcpsIndication->Buffer[3], 200);
-
-            		break;
-
-            	case 1:	// Random Color Mode
-
-            		uint8_t r = (uint8_t)randr(0, 255);
-            		uint8_t g = (uint8_t)randr(0, 255);
-            		uint8_t b = (uint8_t)randr(0, 255);
-
-            		uartprintf("Set Random Color:  Red:%u Green:%u Blue: %u \r\n", r, g, b);
-
-            		// Colors Off
-            		PWM_fadeTo(&ColorHandlers.LedRed, 0, 200);
-            		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 200);
-            		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 200);
-
-            		PWM_fadeTo(&ColorHandlers.LedRed, r, 200);
-            		PWM_fadeTo(&ColorHandlers.LedGreen, g, 200);
-            		PWM_fadeTo(&ColorHandlers.LedBlue, b, 200);
-
-            		break;
-            	case 2: // Rainbow Transition Mode
-            		//TODO
-            		break;
-            	default:
-            		break;
+            	if(!Mailbox_post(mbox, &cmd, BIOS_NO_WAIT)) {
+            		System_printf("Failed to post on mailbox\n");
             	}
             }
-
-            //mcpsIndication->BufferSize
 
             break;
         }
@@ -715,8 +618,17 @@ static void MlmeConfirm( MlmeConfirm_t *mlmeConfirm )
             {
                 // Status is OK, node has joined the network
                 DeviceState = DEVICE_STATE_SEND;
-                PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
+
                 uartputs("# MlmeConfirm: Joined\n");
+
+                // Send Command to activate rainbow mode
+                struct Command_s cmd;
+                cmd.buff[0] = 2;	// Rainbow Mode
+                cmd.buff[1] = 100;	// delay of 1000ms/50 = 20
+
+                if(!Mailbox_post(mbox, &cmd, BIOS_NO_WAIT)) {
+                	System_printf("Failed to post on mailbox\n");
+                }
             }
             else
             {
@@ -748,156 +660,14 @@ static void MlmeConfirm( MlmeConfirm_t *mlmeConfirm )
 }
 
 
+void PulsateRed(){
 
-void setColor(uint8_t color){
-	setPin(Board_LED_R, !(color >> 2) );
-	setPin(Board_LED_G, !(color >> 1 & 0b1) );
-	setPin(Board_LED_B, !(color & 0b1) );
+	struct Command_s cmd;
+
+	if(!Mailbox_post(mbox, &cmd, BIOS_NO_WAIT)) {
+		System_printf("Failed to post on mailbox\n");
+	}
 }
-
-
-void LEDsTest(){
-
-	uint32_t delay = 300; // delay in ms
-
-	// All Off = Black
-	setColor(COLOR_BLACK);
-	DELAY_MS(delay);
-
-	// Red
-	setColor(COLOR_RED);
-	DELAY_MS(delay);
-
-	// Green
-	setColor(COLOR_GREEN);
-	DELAY_MS(delay);
-
-	// Blue
-	setColor(COLOR_BLUE);
-	DELAY_MS(delay);
-
-	// Yellow
-	setColor(COLOR_YELLOW);
-	DELAY_MS(delay);
-
-	// Cyan
-	setColor(COLOR_CYAN);
-	DELAY_MS(delay);
-
-	// Purple
-	setColor(COLOR_PURPLE);
-	DELAY_MS(delay);
-
-	// All = White
-	setColor(COLOR_WHITE);
-	DELAY_MS(delay);
-
-	setColor(COLOR_BLACK);
-	DELAY_MS(delay);
-}
-
-
-
-
-/*
- * Function that initiates the PWM devices, the LEDs are powered at LOW
- * this means their PWM value should be the inverted of the active.
- * i.e. 255 duty cycle means 0, the Mosfets are not inverted.
- */
-void PWM_Init_Devices(){
-
-	PWM_Params params;
-	PWM_Params_init(&params);
-
-	// Same as default
-	params.idleLevel = PWM_IDLE_LOW;                		// Output low when PWM is not running
-	params.periodUnits = PWM_PERIOD_HZ;					// Period is in Hz
-	params.periodValue = 1e6;                      		// 1MHz
-	params.dutyUnits = PWM_DUTY_FRACTION;   				// Duty is fraction of period
-	params.dutyValue = 0 * PWM_DUTY_FRACTION_MAX; 	// % duty cycle
-
-	ColorHandlers.LedRed.handler = 		PWM_open(Board_PWM1, &params);
-    ColorHandlers.LedGreen.handler = 	PWM_open(Board_PWM2, &params);
-    ColorHandlers.LedBlue.handler =  	PWM_open(Board_PWM3, &params);
-
-    ColorHandlers.MosfetRed.handler = 	PWM_open(Board_PWM4, &params);
-    ColorHandlers.MosfetGreen.handler = PWM_open(Board_PWM5, &params);
-    ColorHandlers.MosfetBlue.handler = 	PWM_open(Board_PWM6, &params);
-    ColorHandlers.MosfetWhite.handler = PWM_open(Board_PWM7, &params);
-
-    if (ColorHandlers.LedRed.handler == NULL || ColorHandlers.LedGreen.handler == NULL ||
-    		ColorHandlers.LedBlue.handler == NULL || ColorHandlers.MosfetRed.handler == NULL ||
-			ColorHandlers.MosfetGreen.handler == NULL || ColorHandlers.MosfetBlue.handler == NULL ||
-			ColorHandlers.MosfetWhite.handler == NULL){
-    	System_abort("Failed to Init PWMs");
-    }
-
-    PWM_start(ColorHandlers.LedRed.handler);
-    PWM_start(ColorHandlers.LedGreen.handler);
-    PWM_start(ColorHandlers.LedBlue.handler);
-    PWM_start(ColorHandlers.MosfetRed.handler);
-    PWM_start(ColorHandlers.MosfetGreen.handler);
-    PWM_start(ColorHandlers.MosfetBlue.handler);
-    PWM_start(ColorHandlers.MosfetWhite.handler);
-
-
-
-    // RGB LEDs LOW is at duty cycle 100 % (255)
-    ColorHandlers.LedRed.inverted = true;
-    ColorHandlers.LedRed.duty = 255;
-	ColorHandlers.LedGreen.inverted = true;
-	ColorHandlers.LedGreen.duty = 255;
-	ColorHandlers.LedBlue.inverted = true;
-	ColorHandlers.LedBlue.duty = 255;
-
-    // Turn RGB LEDs off buy increasing duty cycle to 100%
-    PWM_setDuty(ColorHandlers.LedRed.handler, 1 * PWM_DUTY_FRACTION_MAX);
-    PWM_setDuty(ColorHandlers.LedGreen.handler, 1 * PWM_DUTY_FRACTION_MAX);
-    PWM_setDuty(ColorHandlers.LedBlue.handler, 1 * PWM_DUTY_FRACTION_MAX);
-
-
-
-}
-
-
-
-void PWM_test(){
-
-
-		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
-
-		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
-
-		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
-
-
-		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
-
-		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
-
-		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
-
-		PWM_fadeTo(&ColorHandlers.LedRed, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 255, 100);
-		PWM_fadeTo(&ColorHandlers.LedRed, 0, 100);
-		PWM_fadeTo(&ColorHandlers.LedGreen, 0, 100);
-		PWM_fadeTo(&ColorHandlers.LedBlue, 0, 100);
-
-}
-
 
 
 
@@ -908,19 +678,21 @@ void maintask()
     MibRequestConfirm_t mibReq;
 
 
+    // Send Command to blink Blue Led ever 500 ms
+    struct Command_s cmd;
+    cmd.buff[0] = 3;
+    cmd.buff[1] = COLOR_BLUE;
+    cmd.buff[2] = 10;
 
-    // Initializes PWM devices
-    PWM_Init_Devices();
+    if(!Mailbox_post(mbox, &cmd, BIOS_NO_WAIT)) {
+    	System_printf("Failed to post on mailbox\n");
+    }
 
     BoardInitMcu( );
     BoardInitPeriph( );
 
     printf("# Board initialized\n");
     uartputs("# Board initialized\n");
-
-    /* Demo PWM */
-    PWM_test();
-
 
     DeviceState = DEVICE_STATE_INIT;
 
@@ -1091,12 +863,17 @@ int main(void)
     Board_initPWM();
     // Board_initWatchdog();
 
-    /* Construct heartBeat Task  thread */
+
+    /* Construct main Task  thread  (Priority 2)*/
     Task_Params_init(&taskParams);
     taskParams.stackSize = TASKSTACKSIZE;
     taskParams.stack = &task0Stack;
-    Task_construct(&task0Struct, (Task_FuncPtr) maintask, &taskParams,
-                   NULL);
+    taskParams.priority = 2;
+    Task_construct(&task0Struct, (Task_FuncPtr) maintask, &taskParams, NULL);
+
+
+    /* Create task that handles PWM Devices (Priority 1)*/
+    PWM_CreateTask();
 
     // Initialize UART
     setupuart();
