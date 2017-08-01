@@ -1,3 +1,12 @@
+# How to use
+```
+git clone git@github.com:OpenChirp/LoRaBug_Firmware.git
+cd LoRaBug_Firmware/Firmware_LoRaMAC/LoRaMac-node
+git submodule update --init --recursive
+git checkout lorabug
+```
+
+
 # Structure
 * ```Firmware_LMIC``` contains th LMIC Firmware implementation adapted from [link](https://github.com/matthijskooijman/arduino-lmic)
 * ```Firmware_LoRaMCA``` contains the LoRA_MAC Firmware implementation adapted from [Semtech](https://github.com/Lora-net/LoRaMac-node)
