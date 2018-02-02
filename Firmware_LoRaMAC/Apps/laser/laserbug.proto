@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+message LaserMessage {
+	optional uint32 distance = 1;
+  optional uint32 duty 		 = 2;
+	optional float temperature = 3; 
+}

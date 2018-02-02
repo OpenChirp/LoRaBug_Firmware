@@ -47,24 +47,42 @@ extern const PIN_Config BoardGpioInitTable[];
 
 /* Header Pins */
 #define Board_HDR_PB7               IOID_5
-#define Board_HDR_PB6               IOID_25
+
+//#define Board_HDR_PB6               IOID_25
+#define Board_HDR_PB6               PIN_UNASSIGNED
+
 #define Board_HDR_PB3               IOID_26
 #define Board_HDR_GP0               IOID_28
-#define Board_HDR_PORTF1            IOID_27          /* Header Analog 1*/
-#define Board_HDR_PORTF3            IOID_29          /* Header Analog 3*/
+//#define Board_HDR_PORTF1            IOID_27          /* Header Analog 1*/
+#define Board_HDR_PORTF1            PIN_UNASSIGNED
+//#define Board_HDR_PORTF3            IOID_29          /* Header Analog 3*/
+#define Board_HDR_PORTF3            PIN_UNASSIGNED
+
 #define Board_HDR_PORTF6            IOID_30          /* Header Analog 4*/
 
 /* Header Pins2 */
 #define Board_HDR_HDIO0             IOID_5
 #define Board_HDR_HDIO1             IOID_6
 #define Board_HDR_HDIO2             IOID_7
-#define Board_HDR_ADIO0             IOID_23
-#define Board_HDR_ADIO1             IOID_24
-#define Board_HDR_ADIO2             IOID_25
+
+//#define Board_HDR_ADIO0             IOID_23
+#define Board_HDR_ADIO0             PIN_UNASSIGNED
+
+//#define Board_HDR_ADIO1             IOID_24
+#define Board_HDR_ADIO1             PIN_UNASSIGNED
+
+
+//#define Board_HDR_ADIO2             IOID_25
+#define Board_HDR_ADIO2             PIN_UNASSIGNED
+
 #define Board_HDR_ADIO3             IOID_26
-#define Board_HDR_ADIO4             IOID_27
+//#define Board_HDR_ADIO4             IOID_27
+#define Board_HDR_ADIO4             PIN_UNASSIGNED
+
 #define Board_HDR_ADIO5             IOID_28
-#define Board_HDR_ADIO6             IOID_29
+//#define Board_HDR_ADIO6             IOID_29
+#define Board_HDR_ADIO6             PIN_UNASSIGNED
+
 #define Board_HDR_ADIO7             IOID_30
 
 /* LoRa Pins */
@@ -83,8 +101,12 @@ extern const PIN_Config BoardGpioInitTable[];
 #define Board_SX_DIO5               IOID_16
 
 /* USB UART */
-#define Board_UART_RX               IOID_2          /* FTDI RXD  */
-#define Board_UART_TX               IOID_3          /* FTDI TXD  */
+//#define Board_UART_RX               IOID_2          /* FTDI RXD  */
+#define Board_UART_RX               IOID_24          /* FTDI RXD  */
+
+//#define Board_UART_TX               IOID_3          /* FTDI TXD  */
+#define Board_UART_TX               IOID_23          /* FTDI TXD  */
+
 #define Board_UART_CTS              PIN_UNASSIGNED  /* CTS  */
 #define Board_UART_RTS              PIN_UNASSIGNED  /* RTS  */
 
@@ -100,8 +122,11 @@ extern const PIN_Config BoardGpioInitTable[];
 #define Board_SPI1_CSN              PIN_UNASSIGNED
 
 /* I2C */
-#define Board_I2C0_SCL0             PIN_UNASSIGNED
-#define Board_I2C0_SDA0             PIN_UNASSIGNED
+//#define Board_I2C0_SCL0             PIN_UNASSIGNED
+#define Board_I2C0_SCL0             IOID_27
+
+//#define Board_I2C0_SDA0             PIN_UNASSIGNED
+#define Board_I2C0_SDA0             IOID_29
 
 /* SPI */
 #define Board_SPI_FLASH_CS          PIN_UNASSIGNED
@@ -144,9 +169,16 @@ extern const PIN_Config BoardGpioInitTable[];
 #define Board_LED_B					IOID_7
 
 /* RGBW Board MOSFETS */
-#define Board_MOSFET_R				IOID_23
-#define Board_MOSFET_G				IOID_24
-#define Board_MOSFET_B				IOID_25
+//#define Board_MOSFET_R				IOID_23
+#define Board_MOSFET_R              PIN_UNASSIGNED
+
+//#define Board_MOSFET_G				IOID_24
+#define Board_MOSFET_G              PIN_UNASSIGNED
+
+
+//#define Board_MOSFET_B				IOID_25
+#define Board_MOSFET_B              PIN_UNASSIGNED
+
 #define Board_MOSFET_W				IOID_26
 
 /* RGBW Board BUTTONS */
