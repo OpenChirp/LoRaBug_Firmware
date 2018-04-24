@@ -1,3 +1,7 @@
+# (Discontinued) 
+ Use LoRaBUG_DemoClassA instead.
+
+
 # How to use
 ```
 git clone git@github.com:OpenChirp/LoRaBug_Firmware.git
